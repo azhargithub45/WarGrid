@@ -1,1 +1,64 @@
+name: Build Android APK
 
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare Android project
+        run: |
+          mkdir -p app/src/main/java/com/pocketwar/game
+          mkdir -p app/src/main/res/values
+
+          mv -f AndroidManifest.xml app/src/main/AndroidManifest.xml
+          mv -f MainActivity.java app/src/main/java/com/pocketwar/game/MainActivity.java
+          mv -f strings.xml app/src/main/res/values/strings.xml
+          mv -f styles.xml app/src/main/res/values/styles.xml
+
+          cat > app/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application'
+          }
+
+          android {
+              namespace 'com.pocketwar.game'
+              compileSdk 35
+
+              defaultConfig {
+                  applicationId 'com.pocketwar.game'
+                  minSdk 24
+                  targetSdk 35
+                  versionCode 1
+                  versionName '1.0'
+              }
+          }
+          EOF
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10'
+
+      - name: Build APK
+        run: gradle assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: WarGrid-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
